@@ -5,12 +5,6 @@ import { NextResponse } from "next/server";
 export function middleware(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
 
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith("/api/stripe/webhook")) {
-    return NextResponse.next();
-  }
-
   if (!sessionCookie) {
     return NextResponse.redirect(new URL("/authentication", request.url));
   }
