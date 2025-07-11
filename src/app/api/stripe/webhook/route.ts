@@ -24,6 +24,41 @@ export const POST = async (request: Request) => {
   );
 
   switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      // Pega o userId que você enviou na Etapa 1
+      const userId = session.metadata?.userId;
+      const subscriptionId = session.subscription as string;
+      const customerId = session.customer as string;
+
+      if (!userId) {
+        console.error(
+          "ERRO CRÍTICO: userId não encontrado na metadata do checkout.session.completed.",
+        );
+        break; // Sai, mas retorna 200 para o Stripe não reenviar.
+      }
+
+      if (!subscriptionId || !customerId) {
+        console.error(
+          "ERRO: ID da assinatura ou do cliente faltando no evento.",
+        );
+        break;
+      }
+
+      // Atualiza a tabela do usuário com os dados da nova assinatura
+      await db
+        .update(usersTable)
+        .set({
+          stripeSubscriptionId: subscriptionId,
+          stripeCustomerId: customerId,
+          plan: "essential", // ou o plano correspondente
+        })
+        .where(eq(usersTable.id, userId));
+
+      console.log(`✅ Nova assinatura criada para o usuário: ${userId}`);
+      break;
+    }
     case "invoice.paid": {
       if (!event.data.object.id) {
         throw new Error("Subscription ID not found");
